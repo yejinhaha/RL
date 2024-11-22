@@ -1,0 +1,78 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Nov 22 12:06:57 2024
+
+@author: win
+"""
+
+import pandas as pd
+import konlpy
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+bts=pd.read_csv("C:/Users/win/bigdata/12주/news_comment_BTS.csv", encoding='utf-8')
+bts['reply']=bts['reply'].str.replace('[^가-힣]', ' ', regex=True)
+
+kkma=konlpy.tag.Kkma()
+#수정
+
+nouns=bts['reply'].apply(kkma.nouns)
+nouns_copy=nouns[:]
+for i in range(len(nouns_copy)):
+    print(nouns[i])
+    #i 는 리스트 ['','','']
+    for j in range(len(i)):
+        print(type(i[j]))
+        #i[j] 는 str
+        if(i.index(i[j]) != -1):
+            nouns[i].remove(i[j])
+            print(i)
+        break
+
+#%%
+
+nouns=nouns.explode()
+
+df_word=pd.DataFrame({'reply':nouns})
+df_word['count']=df_word['reply'].str.len()
+df_word=df_word.query('count>=2')
+df_word.sort_values('count')
+
+df_word=df_word.groupby('reply', as_index=False) \
+    .agg(n=('reply','count')) \
+    .sort_values('n', ascending=False)
+    
+top20 = df_word.head(20)
+
+
+plt.rcParams.update({"font.family":'Malgun Gothic',
+                     'figure.dpi':'120',
+                     'figure.figsize':[6.5,6]})
+sns.barplot(data=top20, y='reply', x='n', palette="pastel")
+plt.show()
+#%%
+from wordcloud import WordCloud
+import PIL
+import numpy as np
+
+font='C:/Users/win/bigdata/12주/DoHyeon-Regular.ttf'
+dic_word=df_word.set_index('reply').to_dict()['n']
+
+icon = PIL.Image.open('C:/Users/win/bigdata/12주/cloud.png')
+img=PIL.Image.new('RGB',icon.size,(255,255,255))
+img.paste(icon,icon)
+img=np.array(img)
+
+
+wc = WordCloud(random_state=1234,
+               font_path=font,
+               width=400,
+               height=400,
+               background_color='white',
+               mask=img)
+
+img_wordCloud=wc.generate_from_frequencies(dic_word)
+plt.figure(figsize=(10,10))
+plt.axis('off')
+plt.imshow(img_wordCloud)
+plt.show()
